@@ -1,0 +1,16 @@
+#!/opt/homebrew/bin/bash
+# llm-serve — OpenAI-compatible server on 127.0.0.1:8080 (one model at a time).
+#   llm-serve [qwen|mini]   (default: qwen)
+set -euo pipefail
+MODEL_DIR="${HOME}/lab/llm/models"
+case "${1:-qwen}" in
+  qwen) MODEL="${MODEL_DIR}/Qwen_Qwen3.6-27B-Q6_K.gguf";       CTX=32768 ;;
+  mini) MODEL="${MODEL_DIR}/Ministral-8B-Instruct-2410-Q5_K_M.gguf"; CTX=16384 ;;
+  *) echo "unknown model: $1 (use qwen|mini)" >&2; exit 1 ;;
+esac
+exec llama-server \
+  -m "$MODEL" \
+  -ngl 99 \
+  -c "$CTX" \
+  --host 127.0.0.1 --port 8080 \
+  --jinja

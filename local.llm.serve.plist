@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Keeps `llm-serve mini` running as a warm local server so `ask` is always
+  instant. Per-user agent (LaunchAgents) — no sudo, fits a Fleet-managed Mac.
+
+  INSTALL (replace YOURUSER, or use the sed line below):
+    cp local.llm.serve.plist ~/Library/LaunchAgents/local.llm.serve.plist
+    sed -i '' "s|/Users/YOURUSER|$HOME|g" ~/Library/LaunchAgents/local.llm.serve.plist
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/local.llm.serve.plist
+    launchctl enable gui/$(id -u)/local.llm.serve
+
+  STOP / UNLOAD:
+    launchctl bootout gui/$(id -u)/local.llm.serve
+
+  LOGS: ~/lab/llm/logs/serve.{out,err}.log
+  Swap "mini" → "qwen" in ProgramArguments to keep the big model warm instead.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>local.llm.serve</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/YOURUSER/lab/llm/bin/llm-serve</string>
+        <string>mini</string>
+    </array>
+
+    <!-- Start at login and keep it alive if it crashes. -->
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- llm-serve resolves models via $HOME; make sure it's set, and that
+         Homebrew's bin (llama-server) is on PATH for the agent. -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>/Users/YOURUSER</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/YOURUSER/lab/llm/logs/serve.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/YOURUSER/lab/llm/logs/serve.err.log</string>
+
+    <!-- Don't hammer restarts if something's wrong. -->
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+</dict>
+</plist>

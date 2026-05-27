@@ -1,0 +1,91 @@
+#!/opt/homebrew/bin/bash
+# ask — one-shot question to a local model. Pipe-friendly, stdout-only.
+#
+#   ask "what's a PVC in k8s"                  # plain question
+#   git diff | ask "write a commit message"    # stdin = context, arg = instruction
+#   ask "explain this" < script.sh             # same, from a file
+#   kubectl get events | ask                   # stdin only
+#   ask -m qwen "tricky architecture question" # escalate to the big model
+#
+# If `llm-serve` is running on :8080, ask reuses that warm server (fast, correct
+# chat template). Otherwise it spawns a one-shot llama-cli (cold-start).
+set -euo pipefail
+
+MODEL_DIR="${HOME}/lab/llm/models"
+QWEN_FILE="Qwen_Qwen3.6-27B-Q6_K.gguf"
+MINISTRAL_FILE="Ministral-8B-Instruct-2410-Q5_K_M.gguf"
+SERVER="http://127.0.0.1:8080"
+
+# Default model: override per-call with -m, or globally via `export ASK_MODEL=qwen`.
+model="${ASK_MODEL:-mini}"
+
+SYS_PROMPT="You are a terse CLI assistant. Answer directly and concisely. \
+Output plain text for a terminal; do not wrap answers in markdown code fences \
+unless the answer is itself code."
+
+usage() {
+  echo "usage: ask [-m mini|qwen] <prompt>   (also reads stdin)" >&2
+  exit 1
+}
+
+while getopts ":m:h" opt; do
+  case "$opt" in
+    m) model="$OPTARG" ;;
+    h) usage ;;
+    *) usage ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+instruction="${*:-}"
+
+# Pull stdin only if it's piped/redirected (not an interactive terminal).
+stdin_data=""
+if [ ! -t 0 ]; then
+  stdin_data="$(cat)"
+fi
+
+# Assemble the prompt from whatever we got.
+if [[ -n "$instruction" && -n "$stdin_data" ]]; then
+  prompt="${instruction}"$'\n\n---\n'"${stdin_data}"
+elif [[ -n "$instruction" ]]; then
+  prompt="$instruction"
+elif [[ -n "$stdin_data" ]]; then
+  prompt="$stdin_data"
+else
+  usage
+fi
+
+case "$model" in
+  mini) model_file="${MODEL_DIR}/${MINISTRAL_FILE}" ;;
+  qwen) model_file="${MODEL_DIR}/${QWEN_FILE}" ;;
+  *) echo "ask: unknown model '$model' (use mini|qwen)" >&2; exit 1 ;;
+esac
+
+# Dim status to stderr when interactive — never pollutes a pipe.
+status() { [ -t 1 ] && printf '\033[2m· %s\033[0m\n' "$1" >&2 || true; }
+
+if curl -sf --max-time 1 "${SERVER}/health" >/dev/null 2>&1; then
+  status "asking warm server"
+  jq -n --arg sys "$SYS_PROMPT" --arg p "$prompt" \
+    '{messages:[{role:"system",content:$sys},{role:"user",content:$p}],
+      temperature:0.3, stream:false}' \
+  | curl -sf "${SERVER}/v1/chat/completions" \
+      -H 'Content-Type: application/json' -d @- \
+  | jq -r '.choices[0].message.content'
+else
+  # Standalone fallback — one-shot, stderr silenced (model logs are noisy).
+  # System guidance folded into the prompt: Ministral has no system role,
+  # and this stays correct whichever model is selected.
+  status "cold-loading ${model}"
+  llama-cli \
+    -m "$model_file" \
+    -ngl 99 \
+    --jinja \
+    -no-cnv \
+    --no-display-prompt \
+    -p "${SYS_PROMPT}"$'\n\n'"${prompt}" \
+    --temp 0.3 \
+    -n 1024 \
+    2>/dev/null
+fi

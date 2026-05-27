@@ -1,0 +1,33 @@
+# --- Models: never commit GGUFs (20+ GB each) ------------------------------
+models/
+*.gguf
+*.bin
+*.safetensors
+
+# --- Local runtime artifacts -----------------------------------------------
+*.log
+logs/
+*.cache
+cache/
+.DS_Store
+
+# --- Prompts / transcripts that may carry customer context -----------------
+# Keep these local. If you want shareable examples, put sanitized ones in
+# prompts/examples/ and force-add them explicitly.
+prompts/*.txt
+prompts/*.md
+!prompts/examples/
+sessions/
+*.session
+
+# --- Secrets / env ----------------------------------------------------------
+.env
+.env.*
+*.token
+hf_token
+
+# --- Editor / OS junk -------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*~

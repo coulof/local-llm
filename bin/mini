@@ -1,0 +1,10 @@
+#!/opt/homebrew/bin/bash
+# mini — quick generic chat. Ministral-8B-Instruct-2410, Q5_K_M.
+set -euo pipefail
+MODEL_DIR="${HOME}/lab/llm/models"
+exec llama-cli \
+  -m "${MODEL_DIR}/Ministral-8B-Instruct-2410-Q5_K_M.gguf" \
+  -ngl 99 \
+  -c 16384 \
+  --temp 0.3 --top-p 0.9 \
+  -cnv "$@"

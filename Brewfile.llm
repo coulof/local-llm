@@ -1,0 +1,18 @@
+# ~/lab/llm/Brewfile.llm
+# Local LLM stack — llama.cpp (Metal), no Ollama.
+# Compose with your main Brewfile:  brew bundle --file=~/lab/llm/Brewfile.llm
+# Fleet-managed Mac, no sudo: everything here is a formula (no casks → no /Applications writes).
+
+# --- Inference engine -------------------------------------------------------
+# Ships llama-cli, llama-server, llama-bench, etc. Metal is on by default on
+# Apple Silicon. Formula auto-tracks upstream releases.
+brew "llama.cpp"
+
+# --- Model fetching ---------------------------------------------------------
+# `hf` (the new HF CLI, formerly huggingface-cli) for pulling GGUFs.
+# Installs the `hf` command; downloads land wherever you point --local-dir.
+brew "huggingface-cli"
+
+# --- Quality-of-life (skip any you already have in the main Brewfile) -------
+brew "jq"        # parse llama-server /v1 JSON responses
+brew "wget"      # fallback direct downloads from HF resolve URLs
