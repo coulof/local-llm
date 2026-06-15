@@ -1,4 +1,4 @@
-#!/opt/homebrew/bin/bash
+#!/bin/bash
 # llm-serve — OpenAI-compatible server on 127.0.0.1:8080 (one model at a time).
 #   llm-serve [qwen|mini]   (default: qwen)
 set -euo pipefail

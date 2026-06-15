@@ -1,4 +1,4 @@
-#!/opt/homebrew/bin/bash
+#!/bin/bash
 # mini — quick generic chat. Ministral-8B-Instruct-2410, Q5_K_M.
 set -euo pipefail
 MODEL_DIR="${HOME}/lab/llm/models"

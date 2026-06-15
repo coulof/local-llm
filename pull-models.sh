@@ -1,4 +1,4 @@
-#!/opt/homebrew/bin/bash
+#!/bin/bash
 # pull-models.sh — download the GGUFs into ~/lab/llm/models. Idempotent.
 # The wrappers in bin/ are static files (committed) — this script does NOT
 # generate them; it only fetches models.

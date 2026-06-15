@@ -1,4 +1,4 @@
-#!/opt/homebrew/bin/bash
+#!/bin/bash
 # ask — one-shot question to a local model. Pipe-friendly, stdout-only.
 #
 #   ask "what's a PVC in k8s"                  # plain question

@@ -1,4 +1,4 @@
-#!/opt/homebrew/bin/bash
+#!/bin/bash
 # qwen — interactive coding chat. Qwen3.6-27B dense, Q6_K.
 # -ngl 99 offloads all layers to Metal; -cnv is conversation mode.
 set -euo pipefail
