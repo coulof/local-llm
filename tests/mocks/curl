@@ -1,0 +1,17 @@
+#!/bin/bash
+# Mock curl logic
+if [[ "$*" == *"/health"* ]]; then
+  # If we have MOCK_WARM_SERVER=0, simulate server offline
+  if [[ "${MOCK_WARM_SERVER:-1}" == "0" ]]; then
+    exit 1
+  fi
+  exit 0
+fi
+
+if [[ "$*" == *"/v1/chat/completions"* ]]; then
+  cat >/dev/null # Consume stdin to prevent SIGPIPE in upstream pipe
+  echo '{"choices":[{"message":{"content":"mock_warm_server_response"}}]}'
+  exit 0
+fi
+
+echo "mock_curl called with: $*"

@@ -23,3 +23,11 @@ kubectl get events --sort-by=.lastTimestamp | ask -m qwen \
 ```bash
 ask -m qwen "Translate to natural English, keep technical terms" < draft.fr.md
 ```
+
+## Running with MLX
+
+All of these examples work seamlessly under the Apple Silicon-native MLX backend. Simply prefix any `ask` execution with the `LLM_BACKEND=mlx` environment variable:
+
+```bash
+git diff --staged | LLM_BACKEND=mlx ask "Write a Conventional Commits message..."
+```

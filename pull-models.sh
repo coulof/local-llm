@@ -2,6 +2,9 @@
 # pull-models.sh — download the GGUFs into ~/lab/llm/models. Idempotent.
 # The wrappers in bin/ are static files (committed) — this script does NOT
 # generate them; it only fetches models.
+#
+# NOTE: For MLX models (LLM_BACKEND=mlx), downloading and caching is handled
+# dynamically by Hugging Face Hub on first-use, so no manual download is required here.
 set -euo pipefail
 
 MODEL_DIR="${HOME}/lab/llm/models"

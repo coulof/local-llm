@@ -16,3 +16,9 @@ brew "huggingface-cli"
 # --- Quality-of-life (skip any you already have in the main Brewfile) -------
 brew "jq"        # parse llama-server /v1 JSON responses
 brew "wget"      # fallback direct downloads from HF resolve URLs
+brew "python"    # python runtime for MLX
+brew "uv"        # ultra-fast python environment & package manager
+
+# --- Testing ----------------------------------------------------------------
+brew "bats-core" # bash testing framework
+brew "go-task"   # modern task runner / orchestrator

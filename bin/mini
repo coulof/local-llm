@@ -1,10 +1,18 @@
 #!/bin/bash
 # mini — quick generic chat. Ministral-8B-Instruct-2410, Q5_K_M.
 set -euo pipefail
-MODEL_DIR="${HOME}/lab/llm/models"
-exec llama-cli \
-  -m "${MODEL_DIR}/Ministral-8B-Instruct-2410-Q5_K_M.gguf" \
-  -ngl 99 \
-  -c 16384 \
-  --temp 0.3 --top-p 0.9 \
-  -cnv "$@"
+
+BACKEND="${LLM_BACKEND:-llama}"
+
+if [[ "$BACKEND" == "mlx" ]]; then
+  MINI_MLX_MODEL="${MINI_MLX_MODEL:-mlx-community/Ministral-8B-Instruct-2410-4bit}"
+  exec "$(dirname "$0")/chat-mlx" "$MINI_MLX_MODEL" "$@"
+else
+  MODEL_DIR="${HOME}/lab/llm/models"
+  exec llama-cli \
+    -m "${MODEL_DIR}/Ministral-8B-Instruct-2410-Q5_K_M.gguf" \
+    -ngl 99 \
+    -c 16384 \
+    --temp 0.3 --top-p 0.9 \
+    -cnv "$@"
+fi

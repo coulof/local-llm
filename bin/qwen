@@ -2,11 +2,19 @@
 # qwen — interactive coding chat. Qwen3.6-27B dense, Q6_K.
 # -ngl 99 offloads all layers to Metal; -cnv is conversation mode.
 set -euo pipefail
-MODEL_DIR="${HOME}/lab/llm/models"
-exec llama-cli \
-  -m "${MODEL_DIR}/Qwen_Qwen3.6-27B-Q6_K.gguf" \
-  -ngl 99 \
-  -c 32768 \
-  --temp 0.7 --top-p 0.8 \
-  --jinja \
-  -cnv "$@"
+
+BACKEND="${LLM_BACKEND:-llama}"
+
+if [[ "$BACKEND" == "mlx" ]]; then
+  QWEN_MLX_MODEL="${QWEN_MLX_MODEL:-mlx-community/Qwen2.5-Coder-32B-Instruct-4bit}"
+  exec "$(dirname "$0")/chat-mlx" "$QWEN_MLX_MODEL" "$@"
+else
+  MODEL_DIR="${HOME}/lab/llm/models"
+  exec llama-cli \
+    -m "${MODEL_DIR}/Qwen_Qwen3.6-27B-Q6_K.gguf" \
+    -ngl 99 \
+    -c 32768 \
+    --temp 0.7 --top-p 0.8 \
+    --jinja \
+    -cnv "$@"
+fi

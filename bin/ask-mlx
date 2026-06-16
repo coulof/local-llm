@@ -1,0 +1,124 @@
+#!/bin/bash
+# ask-mlx — one-shot question to a local MLX model. Pipe-friendly, stdout-only.
+#
+#   ask-mlx "what's a PVC in k8s"                  # plain question
+#   git diff | ask-mlx "write a commit message"    # stdin = context, arg = instruction
+#   ask-mlx "explain this" < script.sh             # same, from a file
+#   kubectl get events | ask-mlx                   # stdin only
+#   ask-mlx -m qwen "tricky architecture question" # escalate to the big model
+#
+# If `llm-serve` is running on :8080, ask-mlx reuses that warm server (fast, correct
+# chat template). Otherwise it spawns a one-shot mlx-lm generator (cold-start).
+set -euo pipefail
+
+VENV_DIR="${VENV_DIR:-${HOME}/lab/llm/.venv}"
+if [[ ! -d "$VENV_DIR" ]]; then
+  echo "Error: MLX virtual environment not found at $VENV_DIR." >&2
+  echo "Please set up the environment with: uv venv $VENV_DIR && $VENV_DIR/bin/pip install mlx-lm" >&2
+  exit 1
+fi
+
+SERVER="http://127.0.0.1:8080"
+
+# MLX Default Model repositories (can be overridden via env vars)
+export QWEN_MLX_MODEL="${QWEN_MLX_MODEL:-mlx-community/Qwen2.5-Coder-32B-Instruct-4bit}"
+export MINI_MLX_MODEL="${MINI_MLX_MODEL:-mlx-community/Ministral-8B-Instruct-2410-4bit}"
+
+# Default model selection: override per-call with -m, or globally via `export ASK_MODEL=qwen`.
+model="${ASK_MODEL:-mini}"
+
+SYS_PROMPT="You are a terse CLI assistant. Answer directly and concisely. \
+Output plain text for a terminal; do not wrap answers in markdown code fences \
+unless the answer is itself code."
+
+usage() {
+  echo "usage: ask-mlx [-m mini|qwen] <prompt>   (also reads stdin)" >&2
+  exit 1
+}
+
+while getopts ":m:h" opt; do
+  case "$opt" in
+    m) model="$OPTARG" ;;
+    h) usage ;;
+    *) usage ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+instruction="${*:-}"
+
+# Pull stdin only if it's piped/redirected (not an interactive terminal).
+stdin_data=""
+if [ ! -t 0 ]; then
+  stdin_data="$(cat)"
+fi
+
+# Assemble the prompt from whatever we got.
+if [[ -n "$instruction" && -n "$stdin_data" ]]; then
+  prompt="${instruction}"$'\n\n---\n'"${stdin_data}"
+elif [[ -n "$instruction" ]]; then
+  prompt="$instruction"
+elif [[ -n "$stdin_data" ]]; then
+  prompt="$stdin_data"
+else
+  usage
+fi
+
+case "$model" in
+  mini) hf_model="$MINI_MLX_MODEL" ;;
+  qwen) hf_model="$QWEN_MLX_MODEL" ;;
+  *) echo "ask-mlx: unknown model '$model' (use mini|qwen)" >&2; exit 1 ;;
+esac
+
+# Dim status to stderr when interactive — never pollutes a pipe.
+status() { [ -t 1 ] && printf '\033[2m· %s\033[0m\n' "$1" >&2 || true; }
+
+if curl -sf --max-time 1 "${SERVER}/health" >/dev/null 2>&1; then
+  status "asking warm server"
+  jq -n --arg sys "$SYS_PROMPT" --arg p "$prompt" \
+    '{messages:[{role:"system",content:$sys},{role:"user",content:$p}],
+      temperature:0.3, stream:false}' \
+  | curl -sf "${SERVER}/v1/chat/completions" \
+      -H 'Content-Type: application/json' -d @- \
+  | jq -r '.choices[0].message.content'
+else
+  status "cold-loading ${model} (${hf_model})"
+  
+  # Export values for Python script to prevent shell quotation syntax errors.
+  export ASK_HF_MODEL="$hf_model"
+  export ASK_SYS_PROMPT="$SYS_PROMPT"
+  export ASK_PROMPT="$prompt"
+
+  # Run inline Python script with environment variable inputs to guarantee maximum robustness.
+  exec "${VENV_DIR}/bin/python" -c '
+import os, sys, logging, warnings
+os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"
+logging.getLogger("mlx_lm").setLevel(logging.ERROR)
+warnings.filterwarnings("ignore", category=UserWarning, module="transformers")
+
+from mlx_lm import load, generate
+from mlx_lm.sample_utils import make_sampler
+
+model_path = os.environ["ASK_HF_MODEL"]
+sys_prompt = os.environ["ASK_SYS_PROMPT"]
+prompt = os.environ["ASK_PROMPT"]
+
+# Check if model family needs the Mistral regex fix to silence the transformers warning
+tokenizer_config = {}
+if "mistral" in model_path.lower():
+    tokenizer_config["fix_mistral_regex"] = True
+
+# Load and generate without token logs
+model, tokenizer = load(model_path, tokenizer_config=tokenizer_config)
+
+messages = [
+    {"role": "user", "content": f"{sys_prompt}\n\n{prompt}"}
+]
+full_prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+
+sampler = make_sampler(temp=0.3)
+response = generate(model, tokenizer, prompt=full_prompt, sampler=sampler, max_tokens=1024, verbose=False)
+print(response)
+'
+fi

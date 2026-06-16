@@ -1,0 +1,6 @@
+#!/bin/bash
+# Prepend mock info
+echo "mock_python called with: $*"
+if [[ -n "${ASK_PROMPT:-}" ]]; then
+  echo "mock_python_generation_result for prompt: ${ASK_PROMPT}"
+fi

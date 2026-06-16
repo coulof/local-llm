@@ -1,0 +1,24 @@
+#!/bin/bash
+# serve-mlx — OpenAI-compatible server using Apple MLX.
+# Usage: serve-mlx <huggingface-repo-id> [additional_args...]
+set -euo pipefail
+
+VENV_DIR="${VENV_DIR:-${HOME}/lab/llm/.venv}"
+if [[ ! -d "$VENV_DIR" ]]; then
+  echo "Error: MLX virtual environment not found at $VENV_DIR." >&2
+  echo "Please set up the environment with: uv venv $VENV_DIR && $VENV_DIR/bin/pip install mlx-lm" >&2
+  exit 1
+fi
+
+if [[ $# -lt 1 ]]; then
+  echo "Usage: serve-mlx <huggingface-repo-id> [additional_args...]" >&2
+  exit 1
+fi
+
+MODEL="$1"
+shift
+
+exec "${VENV_DIR}/bin/python" -m mlx_lm.server \
+  --model "$MODEL" \
+  --host 127.0.0.1 --port 8080 \
+  "$@"

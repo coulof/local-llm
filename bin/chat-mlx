@@ -1,0 +1,33 @@
+#!/bin/bash
+# chat-mlx — interactive chat using Apple MLX.
+# Usage: chat-mlx <huggingface-repo-id> [additional_args...]
+set -euo pipefail
+
+VENV_DIR="${VENV_DIR:-${HOME}/lab/llm/.venv}"
+if [[ ! -d "$VENV_DIR" ]]; then
+  echo "Error: MLX virtual environment not found at $VENV_DIR." >&2
+  echo "Please set up the environment with: uv venv $VENV_DIR && $VENV_DIR/bin/pip install mlx-lm" >&2
+  exit 1
+fi
+
+if [[ $# -lt 1 ]]; then
+  echo "Usage: chat-mlx <huggingface-repo-id> [additional_args...]" >&2
+  exit 1
+fi
+
+MODEL="$1"
+shift
+
+exec "${VENV_DIR}/bin/python" -c '
+import os, sys, logging, warnings
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"
+logging.getLogger("mlx_lm").setLevel(logging.ERROR)
+warnings.filterwarnings("ignore", category=UserWarning, module="transformers")
+
+try:
+    from mlx_lm.chat import main
+    main()
+except KeyboardInterrupt:
+    print("\nExiting...", file=sys.stderr)
+    sys.exit(0)
+' --model "$MODEL" "$@"

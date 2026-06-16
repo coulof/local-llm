@@ -11,14 +11,18 @@ Lives at `~/lab/llm`. Built for a 48 GB M5 Mac; degrades gracefully on less RAM
 
 ```
 local-llm/                  # → clone/keep as ~/lab/llm
-├── Brewfile.llm            # llama.cpp (Metal) + huggingface-cli
+├── Brewfile.llm            # llama.cpp + huggingface-cli + python/uv
 ├── pull-models.sh          # fetch GGUFs (does NOT generate wrappers)
 ├── local.llm.serve.plist   # launchd agent: keep a model warm
 ├── bin/                    # the wrappers — put THIS on PATH
-│   ├── qwen                #   interactive coding chat
-│   ├── mini                #   quick generic chat
+│   ├── qwen                #   interactive coding chat (supports LLM_BACKEND)
+│   ├── mini                #   quick generic chat (supports LLM_BACKEND)
 │   ├── llm-serve           #   OpenAI-compatible server on :8080
-│   └── ask                 #   pipe-friendly one-shot helper
+│   ├── ask                 #   multi-backend router for the pipe-friendly helper
+│   ├── ask-llama           #   llama.cpp-specific one-shot logic
+│   ├── ask-mlx             #   mlx-lm-specific one-shot logic
+│   ├── chat-mlx            #   generic MLX interactive chat helper
+│   └── serve-mlx           #   generic MLX OpenAI-compatible server helper
 ├── prompts/                # local prompts (gitignored except examples/)
 │   └── examples/
 └── models/                 # GGUFs (gitignored — 20+ GB)
@@ -54,10 +58,14 @@ brew bundle --file=./Brewfile.llm
 # 2. Make the wrappers executable
 chmod +x bin/*
 
-# 3. Pull models (~28 GB download)
+# 3. Create python venv & install mlx-lm (for MLX backend support)
+uv venv .venv
+./.venv/bin/pip install mlx-lm
+
+# 4. Pull models for llama.cpp (~28 GB download)
 ./pull-models.sh
 
-# 4. Put the wrappers on PATH
+# 5. Put the wrappers on PATH
 export PATH="$HOME/lab/llm/bin:$PATH"
 ```
 
@@ -66,6 +74,19 @@ Make the PATH change permanent in your shell config:
 - **bash** (this setup — login shell is `/opt/homebrew/bin/bash`):
   drop it in a `~/.bashrc.d/llm.sh` block, or append to `~/.bashrc`.
 - **zsh** (stock macOS default, if you're on it): append to `~/.zshrc`.
+
+## Engine Selection (MLX vs. llama.cpp)
+
+By default, the wrappers run using **`llama.cpp`** and local GGUFs.
+You can switch to the **Apple-native MLX** backend by setting `LLM_BACKEND=mlx`:
+
+```bash
+LLM_BACKEND=mlx qwen        # Runs Qwen-32B via MLX
+LLM_BACKEND=mlx mini        # Runs Ministral-8B via MLX
+LLM_BACKEND=mlx ask "hello" # Runs ask helper via MLX
+```
+
+Unlike `llama.cpp` which requires pulling files manually via `./pull-models.sh`, the MLX engine downloads and caches Hugging Face models dynamically in `~/.cache/huggingface/hub` during first-use.
 
 ## Usage
 

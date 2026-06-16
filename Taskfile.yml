@@ -1,0 +1,17 @@
+version: '3'
+
+tasks:
+  default:
+    desc: List all available tasks
+    cmds:
+      - task --list
+
+  test:
+    desc: Run BATS unit and integration tests
+    cmds:
+      - bats tests/
+
+  test:verbose:
+    desc: Run BATS tests with TAP/verbose formatting
+    cmds:
+      - bats --formatter tap tests/
