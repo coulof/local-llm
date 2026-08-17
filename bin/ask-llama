@@ -12,8 +12,8 @@
 set -euo pipefail
 
 MODEL_DIR="${HOME}/lab/llm/models"
-QWEN_FILE="Qwen_Qwen3.6-27B-Q6_K.gguf"
-MINISTRAL_FILE="Ministral-8B-Instruct-2410-Q5_K_M.gguf"
+QWEN_FILE="Qwen3.8-27B-Q6_K.gguf"
+MINISTRAL_FILE="mistralai_Ministral-3-8B-Instruct-2512-Q5_K_M.gguf"
 SERVER="http://127.0.0.1:8080"
 
 # Default model: override per-call with -m, or globally via `export ASK_MODEL=qwen`.

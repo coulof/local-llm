@@ -10,15 +10,15 @@ set -euo pipefail
 MODEL_DIR="${HOME}/lab/llm/models"
 mkdir -p "${MODEL_DIR}"
 
-# Coding workhorse: Qwen3.6-27B dense, Q6_K (~22 GB). Q4_K_M (~17 GB) if you
+# Coding workhorse: Qwen3.8-27B dense, Q6_K (~22 GB). Q4_K_M (~17 GB) if you
 # want two models resident; Q8_0 (~28 GB) for max fidelity.
-QWEN_REPO="bartowski/Qwen_Qwen3.6-27B-GGUF"
-QWEN_FILE="Qwen_Qwen3.6-27B-Q6_K.gguf"
+QWEN_REPO="bartowski/Qwen3.8-27B-GGUF"
+QWEN_FILE="Qwen3.8-27B-Q6_K.gguf"
 
-# Lightweight generic: Ministral-8B-Instruct-2410, Q5_K_M (~5.7 GB).
+# Lightweight generic: Ministral-3-8B-Instruct-2512, Q5_K_M (~5.7 GB).
 # K-quant, NOT the Q4_0_X_X "ARM" quants — those bypass Metal on Apple Silicon.
-MINISTRAL_REPO="bartowski/Ministral-8B-Instruct-2410-GGUF"
-MINISTRAL_FILE="Ministral-8B-Instruct-2410-Q5_K_M.gguf"
+MINISTRAL_REPO="bartowski/mistralai_Ministral-3-8B-Instruct-2512-GGUF"
+MINISTRAL_FILE="mistralai_Ministral-3-8B-Instruct-2512-Q5_K_M.gguf"
 
 pull() {  # repo  file
   local repo="$1" file="$2"

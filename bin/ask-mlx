@@ -21,8 +21,8 @@ fi
 SERVER="http://127.0.0.1:8080"
 
 # MLX Default Model repositories (can be overridden via env vars)
-export QWEN_MLX_MODEL="${QWEN_MLX_MODEL:-mlx-community/Qwen2.5-Coder-32B-Instruct-4bit}"
-export MINI_MLX_MODEL="${MINI_MLX_MODEL:-mlx-community/Ministral-8B-Instruct-2410-4bit}"
+export QWEN_MLX_MODEL="${QWEN_MLX_MODEL:-mlx-community/Qwen3.8-27B-4bit}"
+export MINI_MLX_MODEL="${MINI_MLX_MODEL:-mlx-community/Ministral-3-8B-Instruct-2512-4bit}"
 
 # Default model selection: override per-call with -m, or globally via `export ASK_MODEL=qwen`.
 model="${ASK_MODEL:-mini}"

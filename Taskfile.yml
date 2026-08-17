@@ -20,7 +20,7 @@ tasks:
     desc: Compare TTFT and generation speeds between llama.cpp (llama-bench) and MLX (mlx_lm.benchmark)
     cmds:
       - echo "=== Running llama.cpp (GGUF) Benchmark ==="
-      - llama-bench -m models/Ministral-8B-Instruct-2410-Q5_K_M.gguf -p 512 -n 128 -ngl 99
+      - llama-bench -m models/mistralai_Ministral-3-8B-Instruct-2512-Q5_K_M.gguf -p 512 -n 128 -ngl 99
       - echo ""
       - echo "=== Running Apple MLX Benchmark ==="
-      - ./.venv/bin/python -m mlx_lm.benchmark --model mlx-community/Ministral-8B-Instruct-2410-4bit -p 512 -g 128
+      - ./.venv/bin/python -m mlx_lm.benchmark --model mlx-community/Ministral-3-8B-Instruct-2512-4bit -p 512 -g 128

@@ -8,16 +8,16 @@ MODEL_TYPE="${1:-qwen}"
 
 if [[ "$BACKEND" == "mlx" ]]; then
   case "$MODEL_TYPE" in
-    qwen) MLX_MODEL="${QWEN_MLX_MODEL:-mlx-community/Qwen2.5-Coder-32B-Instruct-4bit}" ;;
-    mini) MLX_MODEL="${MINI_MLX_MODEL:-mlx-community/Ministral-8B-Instruct-2410-4bit}" ;;
+    qwen) MLX_MODEL="${QWEN_MLX_MODEL:-mlx-community/Qwen3.8-27B-4bit}" ;;
+    mini) MLX_MODEL="${MINI_MLX_MODEL:-mlx-community/Ministral-3-8B-Instruct-2512-4bit}" ;;
     *) echo "unknown model: $MODEL_TYPE (use qwen|mini)" >&2; exit 1 ;;
   esac
   exec "$(dirname "$0")/serve-mlx" "$MLX_MODEL"
 else
   MODEL_DIR="${HOME}/lab/llm/models"
   case "$MODEL_TYPE" in
-    qwen) MODEL="${MODEL_DIR}/Qwen_Qwen3.6-27B-Q6_K.gguf";       CTX=32768 ;;
-    mini) MODEL="${MODEL_DIR}/Ministral-8B-Instruct-2410-Q5_K_M.gguf"; CTX=16384 ;;
+    qwen) MODEL="${MODEL_DIR}/Qwen3.8-27B-Q6_K.gguf";       CTX=32768 ;;
+    mini) MODEL="${MODEL_DIR}/mistralai_Ministral-3-8B-Instruct-2512-Q5_K_M.gguf"; CTX=16384 ;;
     *) echo "unknown model: $MODEL_TYPE (use qwen|mini)" >&2; exit 1 ;;
   esac
   exec llama-server \

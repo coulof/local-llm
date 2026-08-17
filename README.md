@@ -35,8 +35,8 @@ them, change the flags. Nothing generates them.
 
 | Alias | Model | Quant | ~Size | Use |
 |-------|-------|-------|-------|-----|
-| `qwen` | Qwen3.6-27B (dense) | Q6_K | ~22 GB | Coding, agentic work, long context |
-| `mini` | Ministral-8B-Instruct-2410 | Q5_K_M | ~5.7 GB | Fast everyday Q&A, summaries, drafts |
+| `qwen` | Qwen3.8-27B (dense) | Q6_K | ~22 GB | Coding, agentic work, long context |
+| `mini` | Ministral-3-8B-Instruct-2512 | Q5_K_M | ~5.7 GB | Fast everyday Q&A, summaries, drafts |
 
 Both are Apache 2.0 / open-weight, fetched from
 [bartowski](https://huggingface.co/bartowski) GGUF repos.
@@ -81,7 +81,7 @@ By default, the wrappers run using **`llama.cpp`** and local GGUFs.
 You can switch to the **Apple-native MLX** backend by setting `LLM_BACKEND=mlx`:
 
 ```bash
-LLM_BACKEND=mlx qwen        # Runs Qwen-32B via MLX
+LLM_BACKEND=mlx qwen        # Runs Qwen-27B via MLX
 LLM_BACKEND=mlx mini        # Runs Ministral-8B via MLX
 LLM_BACKEND=mlx ask "hello" # Runs ask helper via MLX
 ```
