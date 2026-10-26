@@ -18,6 +18,7 @@ local-llm/                  # → clone/keep as ~/lab/llm
 │   ├── qwen                #   interactive coding chat (supports LLM_BACKEND)
 │   ├── mini                #   quick generic chat (supports LLM_BACKEND)
 │   ├── llm-serve           #   OpenAI-compatible server on :8080
+│   ├── opencode-local      #   opencode on the local llama-server (auto-starts it)
 │   ├── ask                 #   multi-backend router for the pipe-friendly helper
 │   ├── ask-llama           #   llama.cpp-specific one-shot logic
 │   ├── ask-mlx             #   mlx-lm-specific one-shot logic
@@ -119,6 +120,29 @@ ask -m qwen "tricky architecture question" # escalate to the 27B model
 Defaults to `mini`. Set `export ASK_MODEL=qwen` to flip the default.
 Start a warm server once (`llm-serve mini &`) and every `ask` after is instant.
 
+### `opencode-local` — coding agent on the local model
+
+[opencode](https://opencode.ai) talks to `llama-server` through a custom
+`llama.cpp` provider in `~/.config/opencode/opencode.jsonc` (v2 `providers`
+schema, `@ai-sdk/openai-compatible`, `baseURL` `http://127.0.0.1:8080/v1`,
+models `qwen` and `mini` = `llm-serve`'s `--alias`).
+
+```bash
+opencode-local                 # TUI on qwen; pick llama.cpp/qwen once via /models
+opencode-local mini            # same, with the small model
+opencode-local qwen run "fix the failing test"   # one-shot, --model injected
+LLM_KEEP_SERVER=1 opencode-local                 # leave the server up afterwards
+```
+
+If something is already listening on `:8080` (e.g. the launchd agent) it is
+reused, provided it serves the same model; otherwise the wrapper starts
+`llm-serve` with an agent-sized context (`LLM_CTX`: 64K qwen / 32K mini, which
+match `limit.context` in the opencode config), waits for `/health`, and stops it
+when opencode exits. Server log: `logs/opencode-serve.log`.
+
+`llm-serve` honours `LLM_CTX` and `LLM_PORT` overrides (llama backend). If you
+change the port, update `baseURL` in the opencode config too.
+
 ## Keep a model warm (launchd)
 
 `local.llm.serve.plist` runs `llm-serve mini` as a per-user login agent — no
@@ -140,7 +164,9 @@ plist's `ProgramArguments` to keep the big model warm instead.
 
 ## Tuning
 
-- **More context:** raise `-c` in a wrapper (32K → 64K) at the cost of RAM.
+- **More context:** `LLM_CTX=131072 llm-serve qwen` (per slot; default 64K qwen / 16K mini).
+- **Parallel slots:** `llm-serve` runs `-np 2`, each slot with its own `LLM_CTX` of KV
+  (q8_0, ~2 GiB per 64K on qwen). `LLM_PARALLEL=1` halves it; `LLM_KV_TYPE=f16` for exact KV.
 - **More fidelity:** swap `Q6_K` → `Q8_0` in `pull-models.sh` (~28 GB, slower).
 - **Two models resident:** drop `qwen` to `Q4_K_M` (~17 GB) so both fit at once.
 - **Speed check:** `llama-bench -m models/<file>.gguf` for tok/s on your machine.

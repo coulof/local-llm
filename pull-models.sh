@@ -7,7 +7,7 @@
 # dynamically by Hugging Face Hub on first-use, so no manual download is required here.
 set -euo pipefail
 
-MODEL_DIR="${HOME}/lab/llm/models"
+MODEL_DIR="${MODEL_DIR:-${HOME}/lab/llm/models}"
 mkdir -p "${MODEL_DIR}"
 
 # Coding workhorse: Qwen3.8-27B dense, Q6_K (~22 GB). Q4_K_M (~17 GB) if you

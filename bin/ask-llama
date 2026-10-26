@@ -11,7 +11,7 @@
 # chat template). Otherwise it spawns a one-shot llama-cli (cold-start).
 set -euo pipefail
 
-MODEL_DIR="${HOME}/lab/llm/models"
+MODEL_DIR="${MODEL_DIR:-${HOME}/lab/llm/models}"
 QWEN_FILE="Qwen3.8-27B-Q6_K.gguf"
 MINISTRAL_FILE="mistralai_Ministral-3-8B-Instruct-2512-Q5_K_M.gguf"
 SERVER="http://127.0.0.1:8080"
@@ -75,6 +75,12 @@ if curl -sf --max-time 1 "${SERVER}/health" >/dev/null 2>&1; then
   | jq -r '.choices[0].message.content'
 else
   # Standalone fallback — one-shot, stderr silenced (model logs are noisy).
+  if [[ ! -f "$model_file" ]]; then
+    echo "Error: Model file not found at $model_file" >&2
+    echo "Please download it first with: ./pull-models.sh" >&2
+    exit 1
+  fi
+
   # System guidance manually wrapped in model-appropriate instruct tokens to bypass buggy/deprecated CLI template features.
   status "cold-loading ${model}"
   

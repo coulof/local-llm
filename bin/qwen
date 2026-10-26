@@ -1,6 +1,6 @@
 #!/bin/bash
 # qwen — interactive coding chat. Qwen3.8-27B dense, Q6_K.
-# -ngl 99 offloads all layers to Metal; -cnv is conversation mode.
+# -ngl 99 offloads all layers to Metal.
 set -euo pipefail
 
 BACKEND="${LLM_BACKEND:-llama}"
@@ -9,12 +9,18 @@ if [[ "$BACKEND" == "mlx" ]]; then
   QWEN_MLX_MODEL="${QWEN_MLX_MODEL:-mlx-community/Qwen3.8-27B-4bit}"
   exec "$(dirname "$0")/chat-mlx" "$QWEN_MLX_MODEL" "$@"
 else
-  MODEL_DIR="${HOME}/lab/llm/models"
+  MODEL_DIR="${MODEL_DIR:-${HOME}/lab/llm/models}"
+  MODEL_FILE="${MODEL_DIR}/Qwen3.8-27B-Q6_K.gguf"
+  if [[ ! -f "$MODEL_FILE" ]]; then
+    echo "Error: Model file not found at $MODEL_FILE" >&2
+    echo "Please download it first with: ./pull-models.sh" >&2
+    exit 1
+  fi
   exec llama-cli \
-    -m "${MODEL_DIR}/Qwen3.8-27B-Q6_K.gguf" \
+    -m "$MODEL_FILE" \
     -ngl 99 \
     -c 32768 \
     --temp 0.7 --top-p 0.8 \
     --jinja \
-    -cnv "$@"
+    "$@"
 fi

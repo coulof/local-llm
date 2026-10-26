@@ -8,6 +8,16 @@ if [[ "$*" == *"/health"* ]]; then
   exit 0
 fi
 
+if [[ "$*" == *"/v1/models"* ]]; then
+  echo "{\"object\":\"list\",\"data\":[{\"id\":\"${MOCK_SERVED_MODEL:-qwen}\",\"object\":\"model\"}]}"
+  exit 0
+fi
+
+if [[ "$*" == *"/props"* ]]; then
+  echo "{\"default_generation_settings\":{\"n_ctx\":${MOCK_N_CTX:-65536}}}"
+  exit 0
+fi
+
 if [[ "$*" == *"/v1/chat/completions"* ]]; then
   cat >/dev/null # Consume stdin to prevent SIGPIPE in upstream pipe
   echo '{"choices":[{"message":{"content":"mock_warm_server_response"}}]}'

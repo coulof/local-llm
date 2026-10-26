@@ -1,0 +1,87 @@
+#!/bin/bash
+# opencode-local — run opencode against the local llama.cpp server.
+#   opencode-local [qwen|mini] [opencode args...]   (default: qwen)
+#
+# Reuses a llama-server already listening on LLM_PORT; otherwise starts
+# `llm-serve <model>` in the background with an agent-sized context, waits for
+# it to load, runs opencode, and stops the server on exit
+# (set LLM_KEEP_SERVER=1 to leave it running).
+#
+# The provider is declared as `llama.cpp` in ~/.config/opencode/opencode.jsonc;
+# its model IDs (qwen, mini) match llm-serve's --alias.
+set -euo pipefail
+
+MODEL_TYPE="qwen"
+if [[ "${1:-}" == "qwen" || "${1:-}" == "mini" ]]; then
+  MODEL_TYPE="$1"; shift
+fi
+
+# opencode is an agent: its system prompt + tool schemas eat ~10-15K tokens,
+# so give it more room than the chat defaults. Must match `limit.context`
+# in the opencode provider config.
+case "$MODEL_TYPE" in
+  qwen) DEFAULT_CTX=65536 ;;
+  mini) DEFAULT_CTX=32768 ;;
+esac
+export LLM_CTX="${LLM_CTX:-$DEFAULT_CTX}"
+
+PORT="${LLM_PORT:-8080}"
+BASE="http://127.0.0.1:${PORT}"
+BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
+LOG_DIR="${LLM_LOG_DIR:-$(dirname "$BIN_DIR")/logs}"
+WAIT_SECS="${LLM_WAIT_SECS:-300}"
+
+SERVER_PID=""
+cleanup() {
+  if [[ -n "$SERVER_PID" && "${LLM_KEEP_SERVER:-0}" != "1" ]]; then
+    echo "Stopping llama-server (pid $SERVER_PID)..." >&2
+    kill "$SERVER_PID" 2>/dev/null || true
+    wait "$SERVER_PID" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT
+
+if curl -sf -m 2 "${BASE}/health" >/dev/null 2>&1; then
+  RUNNING="$(curl -sf -m 2 "${BASE}/v1/models" | grep -o '"id": *"[^"]*"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/' || true)"
+  if [[ -n "$RUNNING" && "$RUNNING" != "$MODEL_TYPE" ]]; then
+    echo "Error: port ${PORT} is already serving '${RUNNING}', not '${MODEL_TYPE}'." >&2
+    echo "Use 'opencode-local ${RUNNING}', stop that server, or set LLM_PORT." >&2
+    exit 1
+  fi
+  N_CTX="$(curl -sf -m 2 "${BASE}/props" | grep -o '"n_ctx": *[0-9]*' | head -1 | grep -o '[0-9]*$' || true)"
+  if [[ -n "$N_CTX" && "$N_CTX" -lt "$LLM_CTX" ]]; then
+    echo "Warning: running server has n_ctx=${N_CTX} (< ${LLM_CTX}); long sessions may overflow." >&2
+  fi
+  echo "Using llama-server already running on :${PORT}." >&2
+else
+  mkdir -p "$LOG_DIR"
+  LOG="${LOG_DIR}/opencode-serve.log"
+  echo "Starting llm-serve ${MODEL_TYPE} (ctx ${LLM_CTX}) on :${PORT} — log: ${LOG}" >&2
+  LLM_BACKEND=llama "${BIN_DIR}/llm-serve" "$MODEL_TYPE" >"$LOG" 2>&1 &
+  SERVER_PID=$!
+
+  for ((i = 0; i < WAIT_SECS; i++)); do
+    if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+      SERVER_PID=""
+      echo "Error: llama-server exited during startup. Last log lines:" >&2
+      tail -n 20 "$LOG" >&2
+      exit 1
+    fi
+    curl -sf -m 2 "${BASE}/health" >/dev/null 2>&1 && break
+    sleep 1
+  done
+  if ! curl -sf -m 2 "${BASE}/health" >/dev/null 2>&1; then
+    echo "Error: llama-server not healthy after ${WAIT_SECS}s (see ${LOG})." >&2
+    exit 1
+  fi
+  echo "llama-server ready." >&2
+fi
+
+# `opencode run` and `opencode mini` take --model; the TUI uses its last
+# selected model (pick "llama.cpp/<model>" once with /models).
+ARGS=("$@")
+if [[ "${1:-}" == "run" || "${1:-}" == "mini" ]] && [[ " $* " != *" -m "* && " $* " != *" --model"* ]]; then
+  ARGS=("$1" --model "llama.cpp/${MODEL_TYPE}" "${@:2}")
+fi
+
+opencode ${ARGS[@]+"${ARGS[@]}"}

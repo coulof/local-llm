@@ -1,6 +1,9 @@
 #!/bin/bash
 # llm-serve — OpenAI-compatible server on 127.0.0.1:8080 (one model at a time).
 #   llm-serve [qwen|mini]   (default: qwen)
+#   env: LLM_PORT (default 8080), and for llama only:
+#        LLM_CTX (context per slot), LLM_PARALLEL (slots, default 2),
+#        LLM_KV_TYPE (KV cache type, default q8_0)
 set -euo pipefail
 
 BACKEND="${LLM_BACKEND:-llama}"
@@ -14,16 +17,25 @@ if [[ "$BACKEND" == "mlx" ]]; then
   esac
   exec "$(dirname "$0")/serve-mlx" "$MLX_MODEL"
 else
-  MODEL_DIR="${HOME}/lab/llm/models"
+  MODEL_DIR="${MODEL_DIR:-${HOME}/lab/llm/models}"
   case "$MODEL_TYPE" in
-    qwen) MODEL="${MODEL_DIR}/Qwen3.8-27B-Q6_K.gguf";       CTX=32768 ;;
+    qwen) MODEL="${MODEL_DIR}/Qwen3.8-27B-Q6_K.gguf";       CTX=65536 ;;
     mini) MODEL="${MODEL_DIR}/mistralai_Ministral-3-8B-Instruct-2512-Q5_K_M.gguf"; CTX=16384 ;;
     *) echo "unknown model: $MODEL_TYPE (use qwen|mini)" >&2; exit 1 ;;
   esac
+  CTX="${LLM_CTX:-$CTX}"
+  if [[ ! -f "$MODEL" ]]; then
+    echo "Error: Model file not found at $MODEL" >&2
+    echo "Please download it first with: ./pull-models.sh" >&2
+    exit 1
+  fi
   exec llama-server \
     -m "$MODEL" \
     -ngl 99 \
-    -c "$CTX" \
-    --host 127.0.0.1 --port 8080 \
+    -np "${LLM_PARALLEL:-2}" \
+    --kv-unified-per-slot "$CTX" \
+    -fa on -ctk "${LLM_KV_TYPE:-q8_0}" -ctv "${LLM_KV_TYPE:-q8_0}" \
+    --alias "$MODEL_TYPE" \
+    --host 127.0.0.1 --port "${LLM_PORT:-8080}" \
     --jinja
 fi

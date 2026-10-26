@@ -1,2 +1,8 @@
 #!/bin/bash
+for arg in "$@"; do
+  if [[ "$arg" == "-cnv" || "$arg" == "--conversation" ]]; then
+    echo "error: invalid argument: $arg" >&2
+    exit 1
+  fi
+done
 echo "mock_llama_cli called with: $*"
